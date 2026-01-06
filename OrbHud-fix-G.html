@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>DUAL // UNIFIED · OS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#020202">
+  <meta name="description" content="DUAL Unified — Code Vault & Runtime Environment">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;400;500;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+
+  <style>
+    /* --- CSS RESET & VARIABLES --- */
+    :root {
+      /* Palette */
+      --bg-void: #020202;
+      --bg-panel: #0a0a0c;
+      --glass-surface: rgba(20, 20, 25, 0.6);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --glass-highlight: rgba(255, 255, 255, 0.03);
+      
+      /* Colors */
+      --neon-cyan: #00f2ff;
+      --neon-purple: #bd00ff;
+      --alert-red: #ff4d4d;
+      --text-main: #e5e7eb;
+      --text-muted: #6b7280;
+
+      /* Fonts */
+      --font-ui: 'Inter', sans-serif;
+      --font-code: 'JetBrains Mono', monospace;
+      
+      /* Measurements */
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 24px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
+    
+    body {
+      background-color: var(--bg-void);
+      color: var(--text-main);
+      font-family: var(--font-ui);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* --- UTILITIES (Helpers para o JS e Layout) --- */
+    .hidden { display: none !important; }
+    .flex { display: flex; }
+    .flex-col { flex-direction: column; }
+    .items-center { align-items: center; }
+    .justify-center { justify-content: center; }
+    .justify-between { justify-content: space-between; }
+    .gap-2 { gap: 0.5rem; }
+    .gap-3 { gap: 0.75rem; }
+    .w-full { width: 100%; }
+    .h-full { height: 100%; }
+    
+    /* Utility classes usadas pelo JS para animação */
+    .opacity-0 { opacity: 0; pointer-events: none; }
+    .translate-x-full { transform: translateX(100%); }
+    .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    
+    /* --- SCROLLBAR --- */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--neon-cyan); }
+
+    /* --- LAYOUT COMPONENTS --- */
+
+    /* Background Ambient */
+    .void-ambient {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background: radial-gradient(circle at 50% 120%, rgba(0, 242, 255, 0.05), transparent 60%);
+    }
+
+    /* Iframe Nav Background */
+    #navFrame {
+      position: fixed; inset: 0; width: 100%; height: 100%; border: 0; z-index: 0;
+    }
+
+    /* Top Bar */
+    .top-bar {
+      position: fixed; top: 1.5rem; left: 50%; transform: translateX(-50%); z-index: 40;
+      display: flex; align-items: center; gap: 1rem;
+      background: rgba(0,0,0,0.4); backdrop-filter: blur(12px);
+      padding: 0.5rem 1rem; border-radius: 99px;
+      border: 1px solid var(--glass-border);
+    }
+    .brand-text { font-family: var(--font-code); font-size: 0.75rem; color: var(--text-muted); letter-spacing: 2px; }
+    .sep { height: 12px; width: 1px; background: rgba(255,255,255,0.2); }
+    .theme-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; transition: color 0.3s; }
+    .theme-btn:hover { color: #fff; }
+
+    /* Sidebars */
+    .sidebar {
+      position: fixed; top: 50%; transform: translateY(-50%); z-index: 40;
+      display: flex; flex-direction: column; gap: 0.5rem;
+    }
+    .sidebar.right { right: 0.75rem; }
+    .sidebar.left { left: 0.75rem; }
+
+    /* Sidebar Buttons */
+    .icon-btn {
+      width: 2rem; height: 2rem; border-radius: var(--radius-sm);
+      background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border);
+      color: var(--text-muted); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.3s; backdrop-filter: blur(4px);
+    }
+    .icon-btn:hover { background: rgba(255,255,255,0.1); color: #fff; border-color: rgba(255,255,255,0.3); }
+    
+    .nav-btn {
+      color: var(--neon-cyan); font-family: var(--font-code); font-size: 0.9rem;
+    }
+    .nav-btn:hover { background: var(--neon-cyan); color: #000; box-shadow: 0 0 10px rgba(0, 242, 255, 0.4); }
+
+    /* --- MONOLITH (Main Interface) --- */
+    .monolith-wrapper {
+      position: fixed; inset: 0; z-index: 50;
+      display: flex; align-items: center; justify-content: center;
+      padding: 1rem; pointer-events: none;
+      perspective: 1200px;
+    }
+
+    .monolith {
+      width: 100%; max-width: 64rem; height: 80vh; max-height: 850px;
+      background: var(--glass-surface);
+      backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 40px 80px -12px rgba(0, 0, 0, 0.8);
+      
+      display: flex; flex-direction: column; position: relative; overflow: hidden;
+      
+      /* 3D State Closed */
+      opacity: 0; transform: translateY(60px) rotateX(10deg) scale(0.95); transform-style: preserve-3d;
+      transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* Active State (via JS) */
+    body.system-active .monolith {
+      opacity: 1; transform: translateY(0) rotateX(0) scale(1); pointer-events: auto;
+    }
+
+    /* Monolith Header */
+    .mono-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--glass-border);
+      background: var(--glass-highlight);
+    }
+    .mono-brand { display: flex; align-items: center; gap: 0.75rem; }
+    .brand-icon { 
+      width: 2rem; height: 2rem; background: rgba(0, 242, 255, 0.1); 
+      border: 1px solid rgba(0, 242, 255, 0.2); border-radius: 4px;
+      display: flex; align-items: center; justify-content: center; color: var(--neon-cyan);
+    }
+    .brand-title { font-weight: 700; font-size: 0.875rem; letter-spacing: 0.05em; color: #e5e7eb; }
+    
+    .status-badge {
+      font-family: var(--font-code); font-size: 10px; padding: 2px 6px;
+      border-radius: 4px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+      color: #666; letter-spacing: 1px; text-transform: uppercase;
+    }
+
+    /* Content Area */
+    .mono-body { flex: 1; display: flex; position: relative; overflow: hidden; }
+
+    /* View: Vault */
+    .vault-view {
+      width: 100%; height: 100%; padding: 1.5rem; overflow-y: auto;
+      display: flex; flex-direction: column;
+    }
+
+    /* Action Grid */
+    .actions-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    @media (min-width: 768px) { .actions-grid { grid-template-columns: repeat(4, 1fr); } }
+
+    .action-card {
+      padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--glass-border);
+      background: rgba(255,255,255,0.05); color: var(--text-muted); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+    .action-card:hover { background: rgba(255,255,255,0.1); color: white; border-color: rgba(255,255,255,0.2); }
+    
+    .btn-create { background: var(--neon-cyan); color: black; border: none; font-weight: 700; }
+    .btn-create:hover { background: white; box-shadow: 0 0 15px rgba(0, 242, 255, 0.3); }
+
+    .action-card.dashed { border-style: dashed; border-color: rgba(255,255,255,0.2); }
+    .action-card.dashed:hover { border-color: var(--neon-cyan); color: white; background: rgba(0, 242, 255, 0.05); }
+
+    /* Stack List */
+    .list-header { display: flex; justify-content: space-between; margin-bottom: 0.75rem; padding: 0 4px; }
+    .list-label { font-size: 0.75rem; font-family: var(--font-code); color: var(--text-muted); }
+
+    .stack-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.75rem; margin-bottom: 0.5rem;
+      background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md); cursor: pointer; transition: all 0.2s;
+    }
+    .stack-item:hover { border-color: rgba(0, 242, 255, 0.3); background: rgba(255,255,255,0.06); }
+    
+    .stack-info { display: flex; align-items: center; gap: 0.75rem; overflow: hidden; }
+    .stack-icon { 
+      width: 2rem; height: 2rem; border-radius: 6px; background: rgba(0,0,0,0.4); 
+      display: flex; align-items: center; justify-content: center; color: var(--neon-cyan); opacity: 0.7;
+    }
+    .stack-item:hover .stack-icon { opacity: 1; color: var(--neon-cyan); }
+    
+    .stack-text h4 { font-size: 0.875rem; font-weight: 600; color: #d1d5db; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stack-text span { font-size: 10px; font-family: var(--font-code); color: #6b7280; }
+    .stack-item:hover h4 { color: white; }
+
+    .stack-actions { display: flex; gap: 0.5rem; opacity: 0; transition: opacity 0.2s; }
+    .stack-item:hover .stack-actions { opacity: 1; }
+    
+    .mini-btn { width: 2rem; height: 2rem; border-radius: 6px; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .btn-run { background: var(--neon-cyan); color: black; }
+    .btn-run:hover { background: white; }
+    .btn-del { border: 1px solid rgba(255, 77, 77, 0.3); background: transparent; color: var(--alert-red); }
+    .btn-del:hover { background: var(--alert-red); color: white; }
+
+    /* View: Editor */
+    .editor-view {
+      position: absolute; inset: 0; z-index: 10;
+      background: #08080a; padding: 1.5rem;
+      display: flex; flex-direction: column;
+      transition: transform 0.5s cubic-bezier(0.76, 0, 0.24, 1);
+    }
+    /* Classe que o JS alterna para fechar, mas já definimos translate-x-full no utility, aqui ajustamos layout */
+    
+    .editor-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .editor-title { color: var(--neon-cyan); font-family: var(--font-code); font-size: 0.875rem; }
+    .btn-cancel { background: rgba(255,255,255,0.1); color: #d1d5db; border: none; padding: 4px 12px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; }
+    .btn-cancel:hover { background: rgba(255,255,255,0.2); }
+
+    .input-title {
+      width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm); padding: 0.75rem; margin-bottom: 0.75rem;
+      color: white; font-family: var(--font-code); font-size: 0.875rem;
+    }
+    .input-title:focus { border-color: var(--neon-cyan); }
+    
+    .code-area {
+      flex: 1; position: relative; border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm); overflow: hidden; background: rgba(0,0,0,0.5);
+    }
+    textarea#modContent {
+      width: 100%; height: 100%; background: transparent; border: none; padding: 1rem;
+      color: #4ade80; font-family: var(--font-code); font-size: 0.75rem; resize: none;
+    }
+
+    .btn-save {
+      width: 100%; margin-top: 1rem; padding: 0.75rem;
+      background: var(--neon-cyan); color: black; border: none; border-radius: var(--radius-md);
+      font-weight: 700; cursor: pointer; transition: background 0.2s;
+    }
+    .btn-save:hover { background: white; }
+
+    /* Runtime Layer */
+    .runtime-layer {
+      position: absolute; inset: 0; z-index: 20; background: black;
+      display: flex; flex-direction: column;
+      transform: translateY(100%); transition: transform 0.5s cubic-bezier(0.76, 0, 0.24, 1);
+    }
+    .runtime-layer.visible { transform: translateY(0); }
+    
+    .runtime-bar {
+      height: 2.5rem; background: #0a0a0c; border-bottom: 1px solid var(--glass-border);
+      display: flex; align-items: center; justify-content: space-between; padding: 0 1rem;
+    }
+    .runtime-indicator { display: flex; align-items: center; gap: 0.5rem; font-family: var(--font-code); font-size: 0.75rem; color: var(--neon-cyan); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--neon-cyan); animation: pulse 2s infinite; }
+    
+    .runtime-frame-wrap { flex: 1; position: relative; background: white; }
+    .scanline {
+      position: absolute; inset: 0; pointer-events: none; opacity: 0.2; mix-blend-mode: overlay;
+      background: linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.2) 50%); background-size: 100% 4px;
+    }
+
+    /* Footer Pulse */
+    .mono-footer { height: 4px; width: 100%; background: black; position: relative; overflow: hidden; margin-top: auto; }
+    #pulseBar {
+      position: absolute; inset: 0; width: 50%;
+      background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+      animation: scan 3s linear infinite; opacity: 0; transition: opacity 0.3s;
+    }
+
+    /* --- ANIMATIONS --- */
+    @keyframes scan {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(200%); }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .5; }
+    }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    /* --- ORB TRIGGER --- */
+    .orb-container {
+      position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); z-index: 60;
+      transition: all 0.5s ease;
+    }
+    .orb-btn {
+      width: 3.5rem; height: 3.5rem; border-radius: 50%; border: none; cursor: pointer;
+      background: rgba(0,0,0,0.6); backdrop-filter: blur(10px);
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.1), 0 0 30px rgba(0,242,255,0.15);
+      position: relative; display: flex; align-items: center; justify-content: center;
+      transition: 0.3s;
+    }
+    .orb-btn:hover { box-shadow: 0 0 0 1px var(--neon-cyan), 0 0 50px rgba(0,242,255,0.4); }
+    
+    .orb-core { width: 8px; height: 8px; background: white; border-radius: 50%; box-shadow: 0 0 15px white; transition: 0.3s; }
+    .orb-btn:hover .orb-core { background: var(--neon-cyan); box-shadow: 0 0 25px var(--neon-cyan); }
+    
+    .orb-ring { position: absolute; inset: 4px; border-radius: 50%; border: 1px solid transparent; border-top-color: rgba(0,242,255,0.6); animation: spin 8s linear infinite; opacity: 0.6; }
+    .orb-ring.inner { inset: 10px; border-top-color: transparent; border-bottom-color: rgba(189,0,255,0.6); animation-direction: reverse; opacity: 0.4; }
+
+    /* --- TOAST --- */
+    #toast {
+      position: fixed; top: 5rem; left: 50%; transform: translateX(-50%);
+      padding: 0.5rem 1rem; border-radius: var(--radius-sm);
+      background: rgba(0,0,0,0.9); border: 1px solid rgba(0, 242, 255, 0.3);
+      color: var(--neon-cyan); font-family: var(--font-code); font-size: 0.75rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 100;
+      transition: all 0.3s ease; pointer-events: none;
+    }
+    #toast.translate-y-\[-10px\] { transform: translate(-50%, -10px); } /* Helper para o JS */
+
+  </style>
+</head>
+<body>
+
+  <div class="void-ambient"></div>
+  <iframe id="navFrame" src="./index.html"></iframe>
+
+  <div class="top-bar">
+    <div class="brand-text">DUAL // UNIFIED</div>
+    <div class="sep"></div>
+    <button id="themeToggle" class="theme-btn"><i class="fa-solid fa-circle-half-stroke"></i></button>
+  </div>
+
+  <div class="sidebar right">
+    <button class="icon-btn nav-btn" data-url="about:blank" title="Void">Φ</button>
+    <button class="icon-btn nav-btn" data-url="https://kodux78k.github.io/oiDual-Vivivi-1/" title="Vivivi">꩜</button>
+    <button class="icon-btn nav-btn" data-url="https://kodux78k.github.io/NosSolar-dualInfodose/" title="Nosolar">☼</button>
+  </div>
+
+  <div class="sidebar left">
+    <button id="uploadBtn" class="icon-btn"><i class="fa-solid fa-upload"></i></button>
+    <input type="file" id="uploadInput" hidden accept=".html,.js,.json">
+    <button id="remoteBtn" class="icon-btn"><i class="fa-solid fa-globe"></i></button>
+  </div>
+
+  <div class="monolith-wrapper">
+    <div class="monolith">
+      
+      <div class="mono-header">
+        <div class="mono-brand">
+          <div class="brand-icon">
+            <i data-lucide="layers" style="width:16px;height:16px;"></i>
+          </div>
+          <div class="brand-title">DUAL <span style="opacity:0.3; margin:0 4px;">//</span> MONOLITH</div>
+        </div>
+        <div id="sysStatus" class="status-badge">STANDBY</div>
+      </div>
+
+      <div class="mono-body">
+        
+        <div id="viewVault" class="vault-view">
+          
+          <div class="actions-grid">
+            <button id="createBtn" class="action-card btn-create">
+              <i data-lucide="plus-square" style="width:16px;"></i>
+              <span>NOVO</span>
+            </button>
+            <div id="dropZone" class="action-card dashed">
+              <i data-lucide="upload" style="width:16px;"></i>
+              <span style="font-family: var(--font-code)">UPLOAD</span>
+            </div>
+            <button id="infodoseBtn" class="action-card">
+              <i data-lucide="zap" style="width:16px; color:var(--neon-cyan)"></i>
+              <span>INFODOSE</span>
+            </button>
+            <button id="safeBtn" class="action-card">
+              <i data-lucide="shield" style="width:16px; color:var(--alert-red)"></i>
+              <span id="safeLabel">SAFE</span>
+            </button>
+          </div>
+
+          <div class="list-header">
+            <span class="list-label">VAULT STORAGE</span>
+            <span class="list-label" id="vaultCount">0 ITEMS</span>
+          </div>
+          <div id="stackList" class="flex flex-col gap-3" style="padding-bottom: 3rem;">
+            </div>
+        </div>
+
+        <div id="viewEditor" class="editor-view translate-x-full">
+          <div class="editor-header">
+            <div class="editor-title">:: MODULE CREATOR</div>
+            <button id="cancelEditor" class="btn-cancel">CANCELAR</button>
+          </div>
+          
+          <input id="modTitle" type="text" placeholder="NOME DO MÓDULO (ex: Widget Clima)" class="input-title">
+          
+          <div class="code-area">
+            <textarea id="modContent" placeholder=""></textarea>
+          </div>
+          
+          <div class="flex gap-3">
+            <button id="saveEditor" class="btn-save">SALVAR NO VAULT</button>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="mono-footer">
+        <div id="pulseBar"></div>
+      </div>
+
+      <div id="runtimeLayer" class="runtime-layer">
+        <div class="runtime-bar">
+          <div class="runtime-indicator">
+            <div class="dot"></div>
+            <span>RUNTIME // ACTIVE</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="exportBtn" class="btn-cancel" style="font-size:10px;">EXPORT TO NAV</button>
+            <button id="closeRuntime" class="icon-btn" style="width:24px; height:24px; border:none; background:transparent;"><i data-lucide="x" style="width:16px;"></i></button>
+          </div>
+        </div>
+        <div class="runtime-frame-wrap">
+          <iframe id="appFrame" class="w-full h-full" style="border:0;" sandbox="allow-scripts allow-forms allow-modals allow-same-origin allow-pointer-lock"></iframe>
+          <div class="scanline"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="orb-container">
+    <button id="orbBtn" class="orb-btn" aria-label="Toggle System">
+      <div class="orb-core"></div>
+      <div class="orb-ring"></div>
+      <div class="orb-ring inner"></div>
+    </button>
+  </div>
+
+  <div id="toast" class="opacity-0 translate-y-[-10px]">
+    <span id="toastMsg">System Ready</span>
+  </div>
+
+  <script>
+    const App = {
+      config: {
+        vaultKey: 'dual_unified_vault',
+        themeKey: 'dual_theme',
+        navKey: 'dual_nav_last'
+      },
+      state: {
+        active: false,
+        safeMode: true,
+        infodose: false,
+        stacks: []
+      },
+      
+      init() {
+        this.cacheDOM();
+        this.loadData();
+        this.bindEvents();
+        if(window.lucide) lucide.createIcons();
+        
+        // Boot Sequence
+        setTimeout(() => this.toggleSystem(true), 600);
+      },
+
+      cacheDOM() {
+        this.dom = {
+          body: document.body,
+          navFrame: document.getElementById('navFrame'),
+          orbBtn: document.getElementById('orbBtn'),
+          sysStatus: document.getElementById('sysStatus'),
+          stackList: document.getElementById('stackList'),
+          viewVault: document.getElementById('viewVault'),
+          viewEditor: document.getElementById('viewEditor'),
+          runtimeLayer: document.getElementById('runtimeLayer'),
+          appFrame: document.getElementById('appFrame'),
+          modTitle: document.getElementById('modTitle'),
+          modContent: document.getElementById('modContent'),
+          toast: document.getElementById('toast'),
+          pulseBar: document.getElementById('pulseBar'),
+          safeLabel: document.getElementById('safeLabel')
+        };
+      },
+
+      bindEvents() {
+        // System Toggle
+        this.dom.orbBtn.addEventListener('click', () => this.toggleSystem());
+        
+        // Navigation Buttons (Right Sidebar)
+        document.querySelectorAll('[data-url]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            this.dom.navFrame.src = btn.dataset.url;
+            this.showToast(`NAV: ${btn.title}`);
+          });
+        });
+
+        // Editor Controls
+        document.getElementById('createBtn').addEventListener('click', () => this.toggleEditor(true));
+        document.getElementById('cancelEditor').addEventListener('click', () => this.toggleEditor(false));
+        document.getElementById('saveEditor').addEventListener('click', () => this.saveModule());
+        
+        // Vault Actions
+        document.getElementById('dropZone').addEventListener('click', () => document.getElementById('uploadInput').click());
+        document.getElementById('uploadInput').addEventListener('change', (e) => this.handleUpload(e));
+        document.getElementById('uploadBtn').addEventListener('click', () => document.getElementById('uploadInput').click());
+        
+        // Features
+        document.getElementById('safeBtn').addEventListener('click', () => this.toggleSafe());
+        document.getElementById('infodoseBtn').addEventListener('click', () => this.toggleInfodose());
+        document.getElementById('themeToggle').addEventListener('click', () => {
+           // Simples toggle visual para demo
+           this.showToast("THEME MODE: LOCKED (DARK)");
+        });
+        
+        // Runtime
+        document.getElementById('closeRuntime').addEventListener('click', () => this.closeRuntime());
+        document.getElementById('exportBtn').addEventListener('click', () => {
+          if(this.dom.appFrame.srcdoc) {
+            const blob = new Blob([this.dom.appFrame.srcdoc], {type:'text/html'});
+            this.dom.navFrame.src = URL.createObjectURL(blob);
+            this.showToast("EXPORTED TO NAV");
+            this.closeRuntime();
+          }
+        });
+      },
+
+      loadData() {
+        // Vault
+        try {
+          const raw = localStorage.getItem(this.config.vaultKey);
+          if(raw) this.state.stacks = JSON.parse(raw);
+        } catch(e) { this.state.stacks = []; }
+        this.renderVault();
+        
+        // Nav Persistence
+        const last = localStorage.getItem(this.config.navKey);
+        if(last && last !== 'about:blank') this.dom.navFrame.src = last;
+        
+        this.dom.navFrame.onload = () => {
+          try { localStorage.setItem(this.config.navKey, this.dom.navFrame.contentWindow.location.href); } catch(e){}
+        };
+      },
+
+      toggleSystem(force) {
+        this.state.active = force !== undefined ? force : !this.state.active;
+        if(this.state.active) {
+          this.dom.body.classList.add('system-active');
+          this.dom.sysStatus.innerText = "ONLINE";
+          this.dom.sysStatus.style.color = "var(--neon-cyan)";
+          this.dom.sysStatus.style.borderColor = "rgba(0,242,255,0.3)";
+        } else {
+          this.dom.body.classList.remove('system-active');
+          this.dom.sysStatus.innerText = "STANDBY";
+          this.dom.sysStatus.style.color = "#666";
+          this.dom.sysStatus.style.borderColor = "rgba(255,255,255,0.05)";
+        }
+      },
+
+      toggleEditor(show) {
+        if(show) {
+          this.dom.viewEditor.classList.remove('translate-x-full');
+          this.dom.modTitle.value = '';
+          this.dom.modContent.value = '';
+          this.dom.modTitle.focus();
+        } else {
+          this.dom.viewEditor.classList.add('translate-x-full');
+        }
+      },
+
+      toggleSafe() {
+        this.state.safeMode = !this.state.safeMode;
+        this.dom.safeLabel.innerText = this.state.safeMode ? "SAFE" : "RAW";
+        this.dom.safeLabel.style.color = this.state.safeMode ? "inherit" : "#ff4d4d";
+        this.showToast(this.state.safeMode ? "PROTOCOL: SAFE" : "PROTOCOL: RAW (UNSAFE)");
+      },
+      
+      toggleInfodose() {
+        this.state.infodose = !this.state.infodose;
+        this.dom.pulseBar.style.opacity = this.state.infodose ? '1' : '0';
+        this.showToast(this.state.infodose ? "INFODOSE LINKED" : "INFODOSE UNLINKED");
+      },
+
+      saveModule() {
+        const title = this.dom.modTitle.value.trim();
+        const content = this.dom.modContent.value.trim();
+        if(!title) return this.showToast("ERROR: TITLE REQUIRED");
+        
+        const mod = {
+          id: Date.now(),
+          title,
+          content: content || '<h1>Empty Module</h1>',
+          date: new Date().toLocaleDateString()
+        };
+        
+        this.state.stacks.unshift(mod);
+        localStorage.setItem(this.config.vaultKey, JSON.stringify(this.state.stacks));
+        this.renderVault();
+        this.toggleEditor(false);
+        this.showToast("MODULE CRYSTALLIZED");
+      },
+
+      handleUpload(e) {
+        const file = e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          this.state.stacks.unshift({
+            id: Date.now(),
+            title: file.name,
+            content: ev.target.result,
+            date: new Date().toLocaleDateString()
+          });
+          localStorage.setItem(this.config.vaultKey, JSON.stringify(this.state.stacks));
+          this.renderVault();
+          this.showToast("FILE UPLOADED");
+        };
+        reader.readAsText(file);
+      },
+
+      deleteModule(id) {
+        if(!confirm("DELETE MODULE?")) return;
+        this.state.stacks = this.state.stacks.filter(s => s.id !== id);
+        localStorage.setItem(this.config.vaultKey, JSON.stringify(this.state.stacks));
+        this.renderVault();
+      },
+
+      renderVault() {
+        this.dom.stackList.innerHTML = '';
+        document.getElementById('vaultCount').innerText = `${this.state.stacks.length} ITEMS`;
+        
+        if(this.state.stacks.length === 0) {
+          this.dom.stackList.innerHTML = `<div style="text-align:center; padding:2rem; color:#666; font-family:var(--font-code); font-size:12px;">VAULT EMPTY</div>`;
+          return;
+        }
+
+        this.state.stacks.forEach(stack => {
+          const el = document.createElement('div');
+          el.className = 'stack-item';
+          el.innerHTML = `
+            <div class="stack-info">
+              <div class="stack-icon">
+                <i data-lucide="box" style="width:16px;"></i>
+              </div>
+              <div class="stack-text">
+                <h4>${stack.title}</h4>
+                <span>${stack.date}</span>
+              </div>
+            </div>
+            <div class="stack-actions">
+              <button class="mini-btn btn-run"><i data-lucide="play" style="width:12px; fill:currentColor;"></i></button>
+              <button class="mini-btn btn-del"><i data-lucide="trash-2" style="width:12px;"></i></button>
+            </div>
+          `;
+          
+          el.querySelector('.btn-run').onclick = (e) => { e.stopPropagation(); this.runModule(stack.id); };
+          el.querySelector('.btn-del').onclick = (e) => { e.stopPropagation(); this.deleteModule(stack.id); };
+          el.onclick = () => this.runModule(stack.id);
+          
+          this.dom.stackList.appendChild(el);
+        });
+        
+        if(window.lucide) lucide.createIcons();
+      },
+
+      runModule(id) {
+        const mod = this.state.stacks.find(s => s.id === id);
+        if(!mod) return;
+        
+        let code = mod.content;
+        if(this.state.safeMode) {
+          try {
+             if(!code.includes('<html') && !code.includes('<!doctype')) {
+               code = `<style>body{color:#fff;background:transparent;font-family:sans-serif}</style>${code}`;
+             }
+          } catch(e){}
+        }
+
+        this.dom.appFrame.srcdoc = code;
+        this.dom.runtimeLayer.classList.add('visible');
+        this.dom.sysStatus.innerText = "RUNNING";
+        // Animação manual via JS ou CSS class
+        this.dom.sysStatus.style.opacity = '0.7';
+      },
+
+      closeRuntime() {
+        this.dom.runtimeLayer.classList.remove('visible');
+        this.dom.sysStatus.style.opacity = '1';
+        this.dom.sysStatus.innerText = "ONLINE";
+        setTimeout(() => this.dom.appFrame.srcdoc = '', 400);
+      },
+
+      showToast(msg) {
+        this.dom.toast.innerText = msg;
+        this.dom.toast.classList.remove('opacity-0', 'translate-y-[-10px]');
+        clearTimeout(this.toastTimer);
+        this.toastTimer = setTimeout(() => {
+          this.dom.toast.classList.add('opacity-0', 'translate-y-[-10px]');
+        }, 2000);
+      }
+    };
+
+    window.onload = () => App.init();
+  </script>
+</body>
+</html>
